@@ -1,0 +1,280 @@
+local CoreGui = game:GetService("CoreGui")
+local Players = game:GetService("Players")
+local Lighting = game:GetService("Lighting")
+local Workspace = game:GetService("Workspace")
+local UserInputService = game:GetService("UserInputService")
+local player = Players.LocalPlayer
+
+-- ==========================================
+-- 0. เคลียร์ UI เก่าทิ้งก่อน
+-- ==========================================
+if CoreGui:FindFirstChild("GlassFpsBoostFloating") then
+    CoreGui.GlassFpsBoostFloating:Destroy()
+end
+if player.PlayerGui:FindFirstChild("GlassFpsBoostFloating") then
+    player.PlayerGui.GlassFpsBoostFloating:Destroy()
+end
+
+-- ==========================================
+-- 1. สร้าง ScreenGui หลัก
+-- ==========================================
+local screenGui = Instance.new("ScreenGui")
+screenGui.Name = "GlassFpsBoostFloating"
+screenGui.ResetOnSpawn = false
+pcall(function()
+    screenGui.Parent = CoreGui
+end)
+if not screenGui.Parent then
+    screenGui.Parent = player:WaitForChild("PlayerGui")
+end
+
+local frame = Instance.new("Frame")
+frame.Size = UDim2.new(0, 240, 0, 140)
+frame.Position = UDim2.new(0.5, -120, 0.4, -70)
+frame.BackgroundColor3 = Color3.fromRGB(20, 20, 30)
+frame.BackgroundTransparency = 0.25
+frame.BorderSizePixel = 0
+frame.Active = true
+frame.Parent = screenGui
+
+local uiCorner = Instance.new("UICorner")
+uiCorner.CornerRadius = UDim.new(0, 22)
+uiCorner.Parent = frame
+
+local uiStroke = Instance.new("UIStroke")
+uiStroke.Color = Color3.fromRGB(255, 255, 255)
+uiStroke.Transparency = 0.4
+uiStroke.Thickness = 1.5
+uiStroke.Parent = frame
+
+-- ==========================================
+-- 2. Top Bar (แถบหัวข้อ + ปุ่มย่อวงกลม + ปิด)
+-- ==========================================
+local topBar = Instance.new("Frame")
+topBar.Size = UDim2.new(1, 0, 0, 35)
+topBar.BackgroundTransparency = 1
+topBar.BorderSizePixel = 0
+topBar.Active = true
+topBar.Parent = frame
+
+local titleLabel = Instance.new("TextLabel")
+titleLabel.Size = UDim2.new(1, -65, 1, 0)
+titleLabel.Position = UDim2.new(0, 15, 0, 0)
+titleLabel.BackgroundTransparency = 1
+titleLabel.TextColor3 = Color3.fromRGB(255, 255, 255)
+titleLabel.TextSize = 13
+titleLabel.Font = Enum.Font.GothamBold
+titleLabel.Text = "⚡ บูสต์ FPS / ลดแลค"
+titleLabel.TextXAlignment = Enum.TextXAlignment.Left
+titleLabel.Parent = topBar
+
+-- ระบบลากหน้าต่างแบบแมนนวล (ลื่นไหล ไม่บล็อกปุ่มอื่น)
+local draggingMain, dragInputMain, dragStartMain, startPosMain
+topBar.InputBegan:Connect(function(input)
+    if input.UserInputType == Enum.UserInputType.MouseButton1 or input.UserInputType == Enum.UserInputType.Touch then
+        draggingMain = true
+        dragStartMain = input.Position
+        startPosMain = frame.Position
+        input.Changed:Connect(function()
+            if input.UserInputState == Enum.UserInputState.End then
+                draggingMain = false
+            end
+        end)
+    end
+end)
+
+UserInputService.InputChanged:Connect(function(input)
+    if draggingMain and (input.UserInputType == Enum.UserInputType.MouseMovement or input.UserInputType == Enum.UserInputType.Touch) then
+        local delta = input.Position - dragStartMain
+        frame.Position = UDim2.new(startPosMain.X.Scale, startPosMain.X.Offset + delta.X, startPosMain.Y.Scale, startPosMain.Y.Offset + delta.Y)
+    end
+end)
+
+local minimizeBtn = Instance.new("TextButton")
+minimizeBtn.Size = UDim2.new(0, 26, 0, 26)
+minimizeBtn.Position = UDim2.new(1, -58, 0, 4)
+minimizeBtn.BackgroundColor3 = Color3.fromRGB(255, 255, 255)
+minimizeBtn.BackgroundTransparency = 0.75
+minimizeBtn.TextColor3 = Color3.fromRGB(255, 255, 255)
+minimizeBtn.TextSize = 14
+minimizeBtn.Font = Enum.Font.GothamBold
+minimizeBtn.Text = "–"
+minimizeBtn.ZIndex = 5
+minimizeBtn.Parent = topBar
+
+local minCorner = Instance.new("UICorner")
+minCorner.CornerRadius = UDim.new(1, 0)
+minCorner.Parent = minimizeBtn
+
+local closeBtn = Instance.new("TextButton")
+closeBtn.Size = UDim2.new(0, 26, 0, 26)
+closeBtn.Position = UDim2.new(1, -28, 0, 4)
+closeBtn.BackgroundColor3 = Color3.fromRGB(255, 80, 80)
+closeBtn.BackgroundTransparency = 0.3
+closeBtn.TextColor3 = Color3.fromRGB(255, 255, 255)
+closeBtn.TextSize = 12
+closeBtn.Font = Enum.Font.GothamBold
+closeBtn.Text = "×"
+closeBtn.ZIndex = 5
+closeBtn.Parent = topBar
+
+local closeCorner = Instance.new("UICorner")
+closeCorner.CornerRadius = UDim.new(1, 0)
+closeCorner.Parent = closeBtn
+
+-- ==========================================
+-- 3. Content Container (ส่วนฟังก์ชันหลัก)
+-- ==========================================
+local contentContainer = Instance.new("Frame")
+contentContainer.Size = UDim2.new(1, 0, 1, -35)
+contentContainer.Position = UDim2.new(0, 0, 0, 35)
+contentContainer.BackgroundTransparency = 1
+contentContainer.Parent = frame
+
+local toggleBtn = Instance.new("TextButton")
+toggleBtn.Size = UDim2.new(0, 210, 0, 38)
+toggleBtn.Position = UDim2.new(0.5, -105, 0, 10)
+toggleBtn.BackgroundColor3 = Color3.fromRGB(255, 80, 80)
+toggleBtn.BackgroundTransparency = 0.3
+toggleBtn.TextColor3 = Color3.fromRGB(255, 255, 255)
+toggleBtn.TextSize = 13
+toggleBtn.Font = Enum.Font.GothamBold
+toggleBtn.Text = "● บูสต์ FPS: ปิดใช้งาน"
+toggleBtn.Parent = contentContainer
+
+local toggleCorner = Instance.new("UICorner")
+toggleCorner.CornerRadius = UDim.new(0, 12)
+toggleCorner.Parent = toggleBtn
+
+local toggleStroke = Instance.new("UIStroke")
+toggleStroke.Color = Color3.fromRGB(255, 255, 255)
+toggleStroke.Transparency = 0.6
+toggleStroke.Parent = toggleBtn
+
+local labelInfo = Instance.new("TextLabel")
+labelInfo.Size = UDim2.new(1, -30, 0, 25)
+labelInfo.Position = UDim2.new(0, 15, 0, 56)
+labelInfo.BackgroundTransparency = 1
+labelInfo.TextColor3 = Color3.fromRGB(200, 200, 220)
+labelInfo.TextSize = 11
+labelInfo.Font = Enum.Font.GothamMedium
+labelInfo.Text = "กดเปิดเพื่อลดความแลค / ปิดเพื่อคืนค่าเดิม"
+labelInfo.TextWrapped = true
+labelInfo.TextXAlignment = Enum.TextXAlignment.Center
+labelInfo.Parent = contentContainer
+
+-- ==========================================
+-- 4. ปุ่มวงกลมลอยได้ (สำหรับเปิดหน้าต่างกลับมา)
+-- ==========================================
+local floatingBtn = Instance.new("TextButton")
+floatingBtn.Size = UDim2.new(0, 55, 0, 55)
+floatingBtn.Position = UDim2.new(0, 50, 0, 50)
+floatingBtn.BackgroundColor3 = Color3.fromRGB(20, 20, 30)
+floatingBtn.BackgroundTransparency = 0.2
+floatingBtn.TextColor3 = Color3.fromRGB(255, 255, 255)
+floatingBtn.TextSize = 13
+floatingBtn.Font = Enum.Font.GothamBold
+floatingBtn.Text = "เปิด"
+floatingBtn.Visible = false
+floatingBtn.Parent = screenGui
+
+local floatCorner = Instance.new("UICorner")
+floatCorner.CornerRadius = UDim.new(1, 0)
+floatCorner.Parent = floatingBtn
+
+local floatStroke = Instance.new("UIStroke")
+floatStroke.Color = Color3.fromRGB(50, 215, 75)
+floatStroke.Thickness = 2
+floatStroke.Parent = floatingBtn
+
+-- ระบบลากปุ่มวงกลม
+local draggingFloat = false
+local dragStartFloat, startPosFloat
+local hasMoved = false
+
+floatingBtn.InputBegan:Connect(function(input)
+    if input.UserInputType == Enum.UserInputType.MouseButton1 or input.UserInputType == Enum.UserInputType.Touch then
+        draggingFloat = true
+        dragStartFloat = input.Position
+        startPosFloat = floatingBtn.Position
+        hasMoved = false
+        
+        input.Changed:Connect(function()
+            if input.UserInputState == Enum.UserInputState.End then
+                draggingFloat = false
+            end
+        end)
+    end
+end)
+
+UserInputService.InputChanged:Connect(function(input)
+    if draggingFloat and (input.UserInputType == Enum.UserInputType.MouseMovement or input.UserInputType == Enum.UserInputType.Touch) then
+        local delta = input.Position - dragStartFloat
+        if delta.Magnitude > 5 then
+            hasMoved = true
+        end
+        floatingBtn.Position = UDim2.new(startPosFloat.X.Scale, startPosFloat.X.Offset + delta.X, startPosFloat.Y.Scale, startPosFloat.Y.Offset + delta.Y)
+    end
+end)
+
+-- พอกดคลิกปุ่มวงกลม (ถ้าไม่ได้ลาก) ให้เปิดหน้าต่างหลัก
+floatingBtn.MouseButton1Click:Connect(function()
+    if not hasMoved then
+        frame.Visible = true
+        floatingBtn.Visible = false
+    end
+end)
+
+-- พอกดปุ่มย่อ (–) ให้ซ่อนหน้าต่างหลักแล้วแสดงปุ่มวงกลม
+minimizeBtn.MouseButton1Click:Connect(function()
+    frame.Visible = false
+    floatingBtn.Visible = true
+end)
+
+closeBtn.MouseButton1Click:Connect(function()
+    screenGui:Destroy()
+end)
+
+-- ==========================================
+-- 5. ระบบการทำงาน FPS Boost
+-- ==========================================
+local isFpsBoostEnabled = false
+
+toggleBtn.MouseButton1Click:Connect(function()
+    isFpsBoostEnabled = not isFpsBoostEnabled
+    if isFpsBoostEnabled then
+        toggleBtn.BackgroundColor3 = Color3.fromRGB(50, 215, 75)
+        toggleBtn.Text = "● บูสต์ FPS: เปิดใช้งาน"
+        
+        Lighting.GlobalShadows = false
+        Lighting.FogEnd = 999999
+        for _, v in ipairs(Lighting:GetChildren()) do
+            if v:IsA("Sky") or v:IsA("Atmosphere") or v:IsA("PostEffect") or v:IsA("Clouds") then
+                v.Parent = nil
+            end
+        end
+        
+        for _, v in ipairs(Workspace:GetDescendants()) do
+            if v:IsA("BasePart") then
+                v.Material = Enum.Material.SmoothPlastic
+            elseif v:IsA("Decal") or v:IsA("Texture") then
+                v.Transparency = 1
+            elseif v:IsA("ParticleEmitter") or v:IsA("Trail") then
+                v.Enabled = false
+            end
+        end
+    else
+        toggleBtn.BackgroundColor3 = Color3.fromRGB(255, 80, 80)
+        toggleBtn.Text = "● บูสต์ FPS: ปิดใช้งาน"
+        
+        Lighting.GlobalShadows = true
+        Lighting.FogEnd = 100000
+        for _, v in ipairs(Lighting:GetChildren()) do
+            if v:IsA("Sky") or v:IsA("Atmosphere") or v:IsA("PostEffect") or v:IsA("Clouds") then
+                v.Parent = Lighting
+            end
+        end
+        
+        player:LoadCharacter()
+    end
+end)
